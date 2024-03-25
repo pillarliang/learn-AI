@@ -1,0 +1,18 @@
+{
+  "auto_mapping": null,
+  "base_model_name_or_path": "bigscience/bloomz-560m",
+  "fan_in_fan_out": false,
+  "feedforward_modules": [
+    "mlp.dense_4h_to_h"
+  ],
+  "inference_mode": true,
+  "init_ia3_weights": true,
+  "modules_to_save": null,
+  "peft_type": "IA3",
+  "revision": null,
+  "target_modules": [
+    "mlp.dense_4h_to_h",
+    "query_key_value"
+  ],
+  "task_type": "CAUSAL_LM"
+}
