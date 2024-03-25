@@ -124,8 +124,8 @@ def main():
     set_seed(seed)
 
     # TODO
-    # dataset = load_dataset("ought/raft", dataset_name)
-    dataset = load_dataset("/home/guodong.li/data/peft/raft/raft.py", dataset_name, cache_dir="/home/guodong.li/data/peft/data")
+    dataset = load_dataset("ought/raft", dataset_name)
+    # dataset = load_dataset("/home/guodong.li/data/peft/raft/raft.py", dataset_name, cache_dir="/home/guodong.li/data/peft/data")
 
     classes = [k.replace("_", " ") for k in dataset["train"].features["Label"].names]
     dataset = dataset.map(
