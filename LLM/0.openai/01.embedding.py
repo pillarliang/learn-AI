@@ -45,16 +45,16 @@ print(df.head(2))
 # client = OpenAI()
 
 
-# def get_embedding(text, model=embedding_model):
-#     text = text.replace("\n", " ")
-#     return (
-#         client.embeddings.create(
-#             input=[text],
-#             model=model,
-#         )
-#         .data[0]
-#         .embedding
-#     )
+def get_embedding(text, model=embedding_model):
+    text = text.replace("\n", " ")
+    return (
+        client.embeddings.create(
+            input=[text],
+            model=model,
+        )
+        .data[0]
+        .embedding
+    )
 
 
 # df["embedding"] = df["combined"].apply(get_embedding)
