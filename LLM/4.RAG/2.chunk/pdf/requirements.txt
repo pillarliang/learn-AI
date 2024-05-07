@@ -1,0 +1,6 @@
+fitz
+frontend
+sanic
+paddleocr
+paddlepaddle-gpu
+paddlepaddle
