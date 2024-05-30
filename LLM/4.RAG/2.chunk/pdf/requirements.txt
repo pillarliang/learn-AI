@@ -2,5 +2,5 @@ fitz
 frontend
 sanic
 paddleocr
-paddlepaddle-gpu
+paddlepaddle-gpu # only on GPU platform
 paddlepaddle
