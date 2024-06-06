@@ -27,5 +27,6 @@ __all__ = [
     "download_with_progressbar",
     "sorted_layout_boxes",
     "convert_info_docx",
+    "convert_info_markdown",
     "to_excel",
 ]

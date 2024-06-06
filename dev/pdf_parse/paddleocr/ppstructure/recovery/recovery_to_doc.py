@@ -28,6 +28,40 @@ from ppocr.utils.logging import get_logger
 
 logger = get_logger()
 
+def convert_info_markdown(layout_res):
+    res = ''
+    for i, region in enumerate(layout_res):
+        if len(region["res"]) == 0:
+            continue
+        img_idx = region["img_idx"]
+
+        if region["type"].lower() == "figure":
+            excel_save_folder = os.path.join(save_folder, img_name)
+            img_path = os.path.join(
+                excel_save_folder, "{}_{}.jpg".format(region["bbox"], img_idx)
+            )
+            paragraph_pic = doc.add_paragraph()
+            paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = paragraph_pic.add_run("")
+            if flag == 1:
+                run.add_picture(img_path, width=shared.Inches(5))
+            elif flag == 2:
+                run.add_picture(img_path, width=shared.Inches(2))
+        elif region["type"].lower() == "title":
+            doc.add_heading(region["res"][0]["text"])
+        elif region["type"].lower() == "table":
+            parser = HtmlToDocx()
+            parser.table_style = "TableGrid"
+            parser.handle_table(region["res"]["html"], doc)
+        else:
+            paragraph = doc.add_paragraph()
+            paragraph_format = paragraph.paragraph_format
+            for i, line in enumerate(region["res"]):
+                if i == 0:
+                    paragraph_format.first_line_indent = shared.Inches(0.25)
+                text_run = paragraph.add_run(line["text"] + " ")
+                text_run.font.size = shared.Pt(10)
+    return ''
 
 def convert_info_docx(img, res, save_folder, img_name):
     doc = Document()
@@ -37,7 +71,7 @@ def convert_info_docx(img, res, save_folder, img_name):
 
     flag = 1
     for i, region in enumerate(res):
-        if len(region["res"]) == 0:
+        if len(region["res"]) == 0 and region["type"].lower() != "figure":
             continue
         img_idx = region["img_idx"]
         if flag == 2 and region["layout"] == "single":
@@ -54,6 +88,10 @@ def convert_info_docx(img, res, save_folder, img_name):
             img_path = os.path.join(
                 excel_save_folder, "{}_{}.jpg".format(region["bbox"], img_idx)
             )
+            if os.path.exists(img_path):
+                print(f"The file {img_path} exists.")
+            else:
+                print(f"The file {img_path} does not exist.")
             paragraph_pic = doc.add_paragraph()
             paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = paragraph_pic.add_run("")

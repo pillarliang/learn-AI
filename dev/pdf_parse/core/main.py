@@ -6,22 +6,21 @@ from PIL import Image
 from pathlib import Path
 from paddle.utils import try_import
 
-# 获取脚本所在目录的绝对路径
-parent_dir = Path(__file__).resolve().parent.parent
-print(parent_dir)
-# 插入模块路径
+current_dir = Path(__file__).resolve().parent
+parent_dir = current_dir.parent
+# # 插入模块路径
 sys.path.insert(0, str(parent_dir))
-print(sys.path)
 
 from paddleocr import PPStructure,save_structure_res, PaddleOCR, draw_structure_result
-from paddleocr.ppstructure.recovery.recovery_to_doc import sorted_layout_boxes, convert_info_docx
+from paddleocr.ppstructure.recovery.recovery_to_doc import sorted_layout_boxes, convert_info_docx, convert_info_markdown
 
 
 ocr_engine = PPStructure(recovery=True, structure_version='PP-StructureV2')
 
-save_folder = './layout_res'
-pdf_path = '../data/basic.pdf'
-font_path = '../fonts/simfang.ttf' # PaddleOCR下提供字体包
+save_folder = f'{parent_dir}/layout_res'
+pdf_path = f'{parent_dir}/data/basic.pdf'
+font_path = f'{parent_dir}/fonts/simfang.ttf' # PaddleOCR下提供字体包
+
 
 # 从 PDF 中获取页面图像
 def covert_pdf_to_img(pdf_path):
@@ -49,6 +48,15 @@ def covert_pdf_to_img(pdf_path):
     return imgs
 
 
+def get_layout(img, ocr_engine):
+    result = ocr_engine(img)
+    h, w, _ = img.shape
+    res = sorted_layout_boxes(result, w)
+    return res
+
+
 if __name__ == "__main__":
     imgs = covert_pdf_to_img(pdf_path)
-    print(len(imgs))
+    layout_res = get_layout(imgs[0], ocr_engine)
+    res = convert_info_markdown(layout_res)
+    
