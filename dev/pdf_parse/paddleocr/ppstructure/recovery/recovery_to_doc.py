@@ -13,7 +13,10 @@
 # limitations under the License.
 
 import os
+import re
+import pathlib
 from copy import deepcopy
+import urllib.parse
 
 from docx import Document
 from docx import shared
@@ -28,40 +31,85 @@ from ppocr.utils.logging import get_logger
 
 logger = get_logger()
 
-def convert_info_markdown(layout_res):
-    res = ''
-    for i, region in enumerate(layout_res):
-        if len(region["res"]) == 0:
-            continue
-        img_idx = region["img_idx"]
 
+def identifyHeaders(layout_boxes):
+    header_prefix = {} # 标题高度差：header_tag(#) prefix
+    header_res = set()
+    
+    for region in layout_boxes:
+        if  region["type"].lower() in ["title", "header"]:
+            title_height = region["bbox"][3] - region["bbox"][1]  # TODO：一个标题如果多行会不准确
+            header_res.add(title_height)
+            
+    sorted_heights = sorted(header_res, reverse=True)
+    
+    for i, height in enumerate(sorted_heights):
+        header_prefix[height] = '#' * (i+1) + ' '
+        
+    return header_prefix
+    
+    
+def get_region_text(region):
+    """获取每一个 region 的所有文本"""
+    res = ''
+    for line in region["res"]:
+        res += line["text"]
+    return res
+
+
+def save_markdown(md_text):
+    pathlib.Path("./output.md").write_bytes(md_text.encode())
+    
+
+def convert_info_markdown(layout_boxes, save_folder, img_name):
+    # 1. 识别标题信息
+    header_prefix = identifyHeaders(layout_boxes)
+    
+    # process each region one by one
+    res = ''
+    for i, region in enumerate(layout_boxes):
+        img_idx = region["img_idx"]
+        
         if region["type"].lower() == "figure":
             excel_save_folder = os.path.join(save_folder, img_name)
             img_path = os.path.join(
                 excel_save_folder, "{}_{}.jpg".format(region["bbox"], img_idx)
             )
-            paragraph_pic = doc.add_paragraph()
-            paragraph_pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run = paragraph_pic.add_run("")
-            if flag == 1:
-                run.add_picture(img_path, width=shared.Inches(5))
-            elif flag == 2:
-                run.add_picture(img_path, width=shared.Inches(2))
-        elif region["type"].lower() == "title":
-            doc.add_heading(region["res"][0]["text"])
-        elif region["type"].lower() == "table":
-            parser = HtmlToDocx()
-            parser.table_style = "TableGrid"
-            parser.handle_table(region["res"]["html"], doc)
-        else:
-            paragraph = doc.add_paragraph()
-            paragraph_format = paragraph.paragraph_format
-            for i, line in enumerate(region["res"]):
-                if i == 0:
-                    paragraph_format.first_line_indent = shared.Inches(0.25)
-                text_run = paragraph.add_run(line["text"] + " ")
-                text_run.font.size = shared.Pt(10)
-    return ''
+            encoded_file_name = urllib.parse.quote(img_path)
+            if not os.path.exists(img_path):
+                print(f"The file {img_path} does not exists.")
+
+            figure_caption = 'Figure'
+            res += "\n"
+            if i > 0 and layout_boxes[i-1]["type"].lower() == "figure_caption":
+                figure_caption = get_region_text(layout_boxes[i-1])
+                res += f"{figure_caption}\n" # 插入描述
+                res += f"![{figure_caption}]({str(encoded_file_name)})\n" # 插入图片
+            elif i + 1 < len(layout_boxes) and layout_boxes[i+1]["type"].lower() == "figure_caption":
+                figure_caption = get_region_text(layout_boxes[i+1])
+                res += f"![{figure_caption}]({str(encoded_file_name)})\n" # 插入图片
+                res += f"{figure_caption}\n" # 插入描述
+            else:
+                res += f"![{figure_caption}]({str(encoded_file_name)})\n"
+            
+        elif region["type"].lower() in ["title", "header"]:
+            title_height = region["bbox"][3] - region["bbox"][1]
+            hdr_string = header_prefix.get(title_height, '')
+            res += hdr_string + get_region_text(region) + "\n\n"
+    
+        elif region["type"].lower() == "table": # TODO: customize style for table
+            table_content = re.search(r'(<table.*?</table>)', region["res"]["html"], re.DOTALL).group(1)
+            res += f"{table_content}\n\n"
+            
+        elif region["type"].lower() == "table_caption":
+            table_caption = get_region_text(region)
+            res += f"{table_caption}\n"
+        
+        elif region["type"].lower() == "text":
+            res += get_region_text(region) + "\n"
+            
+    save_markdown(res)
+    return res
 
 def convert_info_docx(img, res, save_folder, img_name):
     doc = Document()
@@ -69,7 +117,7 @@ def convert_info_docx(img, res, save_folder, img_name):
     doc.styles["Normal"]._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
     doc.styles["Normal"].font.size = shared.Pt(6.5)
 
-    flag = 1
+    flag = 1 # 当前分栏状态：1为单栏；2为双栏。
     for i, region in enumerate(res):
         if len(region["res"]) == 0 and region["type"].lower() != "figure":
             continue
