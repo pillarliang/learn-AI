@@ -1,0 +1,2 @@
+playwright
+duckduckgo_search==5.3.1b1
